@@ -521,7 +521,68 @@ def follower_count(user_id):
             return None
         finally:
             connection.close()
-    
+
+def get_all_users():
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT user_id, fname, lname FROM User;")
+        users = cursor.fetchall()
+        connection.close()
+        return users
+    return []
+
+def delete_user_by_admin(user_id):
+    connection = create_connection()
+    if connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute(f"CALL DeleteUser({user_id});")
+            connection.commit()
+            st.success("User account deleted successfully.")
+        except Error as e:
+            st.error(f"Error deleting user account: {e}")
+            connection.rollback()
+        finally:
+            connection.close()
+
+# Admin page layout
+def admin_page():
+    st.title("Admin Dashboard")
+
+    # Display users list
+    st.header("User Accounts")
+    users = get_all_users()
+    if users:
+        user_selection = st.selectbox("Select a user to delete:", options=[f"{u[1]} {u[2]} (ID: {u[0]})" for u in users])
+        if user_selection:
+            selected_user_id = int(user_selection.split("ID: ")[1][:-1])
+
+            # Delete button for admin
+            if st.button("Delete Selected User Account"):
+                delete_user_by_admin(selected_user_id)
+    else:
+        st.info("No users found.")
+
+# Main application
+if 'is_admin' not in st.session_state:
+    st.session_state['is_admin'] = False
+
+# Admin login
+if st.session_state['is_admin']:
+    admin_page()
+else:
+    st.title("Admin Login")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login as Admin"):
+        if username == 'admin_user' and password == 'AnkitArjunagi@2003':
+            st.session_state['is_admin'] = True
+            st.rerun()
+        else:
+            st.error("Invalid credentials.")
+
 #This function is to build the dashboard of the user 
 def dashboard():
     st.title("Social Media Insights")
